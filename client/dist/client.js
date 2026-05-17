@@ -3,6 +3,7 @@
 // src/main.ts
 var uiOpen = false;
 var nextPropId = 1;
+var selectedEntity = null;
 var spawnedProps = [];
 function chatNotify(color, title, body) {
   emit("chat:addMessage", { color, multiline: false, args: [title, body] });
@@ -50,6 +51,11 @@ function setUiOpen(open) {
   SetNuiFocus(open, open);
   SendNuiMessage(JSON.stringify({ type: open ? "open" : "close" }));
 }
+function clearOutline() {
+  if (selectedEntity !== null && DoesEntityExist(selectedEntity)) {
+    SetEntityDrawOutline(selectedEntity, false);
+  }
+}
 RegisterCommand("props", () => {
   setUiOpen(!uiOpen);
 }, false);
@@ -72,6 +78,41 @@ on("__cfx_nui:spawn", async (data, cb) => {
   const entity = CreateObject(hash, x, y, z, true, false, false);
   SetModelAsNoLongerNeeded(hash);
   spawnedProps.push({ id: nextPropId++, entity, model: modelName });
+  broadcastState();
+  cb({ ok: true });
+});
+RegisterNuiCallbackType("select");
+on("__cfx_nui:select", (data, cb) => {
+  clearOutline();
+  SetEntityDrawOutlineColor(255, 255, 255, 0);
+  SetEntityDrawOutlineShader(1);
+  if (data.id !== null) {
+    const prop = spawnedProps.find((p) => p.id === data.id);
+    if (prop && DoesEntityExist(prop.entity)) {
+      selectedEntity = prop.entity;
+      SetEntityDrawOutline(prop.entity, true);
+    }
+  }
+  cb({ ok: true });
+});
+RegisterNuiCallbackType("nudge");
+on("__cfx_nui:nudge", (data, cb) => {
+  const prop = spawnedProps.find((p) => p.id === data.id);
+  if (!prop || !DoesEntityExist(prop.entity)) {
+    cb({ ok: false });
+    return;
+  }
+  if (data.type === "move") {
+    const [x, y, z] = GetEntityCoords(prop.entity, false);
+    const next = { x, y, z };
+    next[data.axis] += data.delta;
+    SetEntityCoords(prop.entity, next.x, next.y, next.z, false, false, false, false);
+  } else {
+    const [rx, ry, rz] = GetEntityRotation(prop.entity, 2);
+    const next = { x: rx, y: ry, z: rz };
+    next[data.axis] += data.delta;
+    SetEntityRotation(prop.entity, next.x, next.y, next.z, 2, true);
+  }
   broadcastState();
   cb({ ok: true });
 });

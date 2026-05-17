@@ -4,8 +4,12 @@ type SpawnedProp = {
     model: string;
 }
 
+type Axis = 'x' | 'y' | 'z';
+type NudgeType = 'move' | 'rotate';
+
 let uiOpen = false;
 let nextPropId = 1;
+let selectedEntity: number | null = null;
 const spawnedProps: SpawnedProp[] = [];
 
 function chatNotify(color: [number, number, number], title: string, body: string) {
@@ -62,6 +66,12 @@ function setUiOpen(open: boolean) {
     SendNuiMessage(JSON.stringify({ type: open ? 'open' : 'close' }));
 }
 
+function clearOutline() {
+    if (selectedEntity !== null && DoesEntityExist(selectedEntity)) {
+        SetEntityDrawOutline(selectedEntity, false);
+    }
+}
+
 RegisterCommand('props', () => {
     setUiOpen(!uiOpen);
 }, false);
@@ -92,6 +102,45 @@ on('__cfx_nui:spawn', async (data: { model: string }, cb: (resp: unknown) => voi
     broadcastState();
     cb({ ok: true });
 })
+
+RegisterNuiCallbackType('select');
+on('__cfx_nui:select', (data: {id: number | null}, cb: (resp: unknown) => void) => {
+    clearOutline();
+    SetEntityDrawOutlineColor(255, 255, 255, 0);
+    SetEntityDrawOutlineShader(1);
+    if (data.id !== null) {
+        const prop = spawnedProps.find(p => p.id === data.id);
+        if (prop && DoesEntityExist(prop.entity)) {
+            selectedEntity = prop.entity;
+            SetEntityDrawOutline(prop.entity, true);
+        }
+    }
+    cb({ ok: true });
+})
+
+RegisterNuiCallbackType('nudge');
+on('__cfx_nui:nudge', (data: { id: number; axis: Axis; delta: number; type: NudgeType }, cb: (resp: unknown) => void, ) => {
+    const prop = spawnedProps.find(p => p.id === data.id);
+    if (!prop || !DoesEntityExist(prop.entity)) {
+        cb({ ok: false });
+        return;
+    }
+
+    if (data.type === 'move') {
+        const [x, y, z] = GetEntityCoords(prop.entity, false);
+        const next = { x, y, z };
+        next[data.axis] += data.delta;
+        SetEntityCoords(prop.entity, next.x, next.y, next.z, false, false, false, false);
+    } else {
+        const [rx, ry, rz] = GetEntityRotation(prop.entity, 2);
+        const next = { x: rx, y: ry, z: rz };
+        next[data.axis] += data.delta;
+        SetEntityRotation(prop.entity, next.x, next.y, next.z, 2, true);
+    }
+
+    broadcastState();
+    cb({ ok: true });
+});
 
 on('onResourceStop', (resource: string) => {
     if (resource !== GetCurrentResourceName()) return;

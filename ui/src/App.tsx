@@ -1,18 +1,25 @@
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { nuiFetch } from './nui';
-import { PROP_CATALOG } from './props';
+import { PROP_CATALOG, getPropLabel } from './props';
+import { AxisRow } from './AxisRow';
 
+type Vec3 = { x: number; y: number; z: number };
 type PropState = {
     id: number;
     model: string;
-    position: { x: number, y: number, z: number };
-    rotation: { x: number, y: number, z: number };
-}
+    position: Vec3;
+    rotation: Vec3;
+};
+
+type Step = 'coarse' | 'fine';
+const STEP_VALUES: Record<Step, number> = { coarse: 0.5, fine: 0.01 };
 
 export function App() {
     const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [props, setProps] = useState<PropState[]>([]);
+    const [selectedId, setSelectedId] = useState<number | null>(null);
+    const [step, setStep] = useState<Step>('coarse');
 
     useEffect(() => {
         const handler = (e: MessageEvent) => {
@@ -34,11 +41,38 @@ export function App() {
         return () => window.removeEventListener('keydown', onKey);
     }, [open]);
 
+    useEffect(() => {
+        nuiFetch('select', { id: selectedId });
+    }, [selectedId]);
+
     const filtered = useMemo(() => {
         const query = search.trim().toLowerCase();
         if (!query) return PROP_CATALOG;
-        return PROP_CATALOG.filter(p => p.label.toLowerCase().includes(query) || p.model.toLowerCase().includes(query));
+        return PROP_CATALOG.filter(p =>
+            p.label.toLowerCase().includes(query) || p.model.toLowerCase().includes(query),
+        );
     }, [search]);
+
+    const selected = useMemo(
+        () => props.find(p => p.id === selectedId) ?? null,
+        [props, selectedId],
+    );
+
+    const stepValue = STEP_VALUES[step];
+
+    async function handleSpawn(model: string) {
+        const resp = await nuiFetch<{ ok: boolean; id?: number }>('spawn', { model });
+        if (resp.ok && resp.id !== undefined) setSelectedId(resp.id);
+    }
+
+    function handleNudge(type: 'move' | 'rotate', axis: 'x' | 'y' | 'z', delta: number) {
+        if (selectedId === null) return;
+        nuiFetch('nudge', { id: selectedId, axis, delta, type });
+    }
+
+    function handleObjectSelect(id: number) {
+        if (id !== selectedId) { setSelectedId(id) } else { setSelectedId(null); }
+    }
 
     return (
         <div className={`side-panel ${open ? 'side-panel--open' : ''}`}>
@@ -53,6 +87,7 @@ export function App() {
                     ×
                 </button>
             </header>
+
             <div className="side-panel__body">
                 <input
                     type="text"
@@ -68,7 +103,7 @@ export function App() {
                             <button
                                 type="button"
                                 className="prop-item"
-                                onClick={() => nuiFetch('spawn', { model: p.model })}
+                                onClick={() => handleSpawn(p.model)}
                             >
                                 <span className="prop-item__label">{p.label}</span>
                                 <span className="prop-item__model">{p.model}</span>
@@ -79,6 +114,82 @@ export function App() {
                         <li className="prop-list__empty">No matches</li>
                     )}
                 </ul>
+
+                {props.length > 0 && (
+                    <section className="section">
+                        <h2 className="section__title">Spawned · {props.length}</h2>
+                        <ul className="spawned-list">
+                            {props.map(p => (
+                                <li key={p.id}>
+                                    <button
+                                        type="button"
+                                        className={`spawned-item ${p.id === selectedId ? 'spawned-item--selected'
+                                            : ''}`}
+                                        onClick={() => handleObjectSelect(p.id)}
+                                    >
+                                        <span className="spawned-item__label">{getPropLabel(p.model)}</span>
+                                        <span className="spawned-item__id">#{p.id}</span>
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
+
+                {selected && (
+                    <section className="section">
+                        <h2 className="section__title">Transform</h2>
+
+                        <div className="transform-info">
+                            <code className="transform-info__model">{selected.model}</code>
+                        </div>
+
+                        <div className="step-toggle">
+                            <button
+                                type="button"
+                                className={`step-toggle__btn ${step === 'coarse' ? 'step-toggle__btn--active' :
+                                    ''}`}
+                                onClick={() => setStep('coarse')}
+                            >
+                                Coarse · 0.5
+                            </button>
+                            <button
+                                type="button"
+                                className={`step-toggle__btn ${step === 'fine' ? 'step-toggle__btn--active' :
+                                    ''}`}
+                                onClick={() => setStep('fine')}
+                            >
+                                Fine · 0.01
+                            </button>
+                        </div>
+
+                        <div className="axis-group">
+                            <h3 className="axis-group__title">Position</h3>
+                            {(['x', 'y', 'z'] as const).map(axis => (
+                                <AxisRow
+                                    key={`pos-${axis}`}
+                                    axis={axis}
+                                    value={selected.position[axis]}
+                                    step={stepValue}
+                                    onNudge={delta => handleNudge('move', axis, delta)}
+                                />
+                            ))}
+                        </div>
+
+                        <div className="axis-group">
+                            <h3 className="axis-group__title">Rotation</h3>
+                            {(['x', 'y', 'z'] as const).map(axis => (
+                                <AxisRow
+                                    key={`rot-${axis}`}
+                                    axis={axis}
+                                    value={selected.rotation[axis]}
+                                    step={stepValue}
+                                    onNudge={delta => handleNudge('rotate', axis, delta)}
+                                />
+                            ))}
+                        </div>
+                    </section>
+                )}
             </div>
 
             <footer className="side-panel__footer">

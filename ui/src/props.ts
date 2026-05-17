@@ -20,3 +20,7 @@ export const PROP_CATALOG: PropCatalogEntry[] = [
     { model: 'prop_skid_tyre_01', label: 'Tire Stack' },
     { model: 'prop_bench_01a', label: 'Park Bench' },
 ];
+
+export function getPropLabel(model: string): string {
+    return PROP_CATALOG.find(p => p.model === model)?.label ?? model;
+}

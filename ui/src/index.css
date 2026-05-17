@@ -1,5 +1,11 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
 
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
 html,
 body,
 #root {
@@ -76,4 +82,84 @@ body,
     flex: 1;
     padding: 20px 24px;
     overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.side-panel__footer {
+    padding: 14px 24px;
+    border-top: 1px solid rgba(255, 255, 255, 0.06);
+    font-size: 0.8125rem;
+    color: rgba(255, 255, 255, 0.55);
+}
+
+.search-input {
+    width: 100%;
+    padding: 10px 12px;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    color: white;
+    font-size: 0.875rem;
+    outline: none;
+    transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.search-input::placeholder {
+    color: rgba(255, 255, 255, 0.35);
+}
+
+.search-input:focus {
+    border-color: rgba(255, 255, 255, 0.2);
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.prop-list {
+    list-style: none;
+    margin: 16px 0 0 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.prop-list__empty {
+    padding: 16px 8px;
+    text-align: center;
+    color: rgba(255, 255, 255, 0.4);
+    font-size: 0.8125rem;
+}
+
+.prop-item {
+    width: 100%;
+    background: transparent;
+    border: 0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    text-align: left;
+    color: white;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    transition: background-color 120ms ease;
+}
+
+.prop-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+}
+
+.prop-item:active {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.prop-item__label {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.prop-item__model {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.6875rem;
+    color: rgba(255, 255, 255, 0.4);
 }

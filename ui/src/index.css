@@ -1,0 +1,79 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap');
+
+html,
+body,
+#root {
+    height: 100%;
+    margin: 0;
+    background: transparent;
+    color: white;
+    font-family: "Inter", sans-serif;
+}
+
+.side-panel {
+    position: fixed;
+    top: 24px;
+    right: 24px;
+    bottom: 24px;
+    width: 380px;
+
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+
+    opacity: 0.95;
+    background: #131314;
+    border: 1px solid #1f1f1f;
+    border-radius: 14px;
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5);
+
+    transform: translateX(calc(100% + 32px));
+    transition: transform 320ms ease-in-out;
+    pointer-events: none;
+}
+
+.side-panel--open {
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+.side-panel__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 24px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.side-panel__title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+}
+
+.side-panel__close {
+    background: transparent;
+    border: 0;
+    color: rgba(255, 255, 255, 0.5);
+    font-size: 22px;
+    line-height: 1;
+    width: 28px;
+    height: 28px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 150ms ease, color 150ms ease;
+}
+
+.side-panel__close:hover {
+    background: rgba(255, 255, 255, 0.08);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.side-panel__body {
+    flex: 1;
+    padding: 20px 24px;
+    overflow-y: auto;
+}

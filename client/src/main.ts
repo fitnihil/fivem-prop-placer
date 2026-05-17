@@ -1,7 +1,21 @@
-const chatNotify = (color: [number, number, number], title: string, body: string) => {
-    emit('chat:addMessage', {color, multiline: false, args: [title, body]})
+let uiOpen = false;
+
+function chatNotify(color: [number, number, number], title: string, body: string) {
+    emit('chat:addMessage', { color, multiline: false, args: [title, body] });
+}
+
+function setUiOpen(open: boolean) {
+    uiOpen = open;
+    SetNuiFocus(open, open);
+    SendNuiMessage(JSON.stringify({ type: open ? 'open' : 'close' }));
 }
 
 RegisterCommand('props', () => {
-    chatNotify([100, 255, 255], 'Prop Placer', 'Command registered')
-}, false)
+    setUiOpen(!uiOpen);
+}, false);
+
+RegisterNuiCallbackType('close');
+on('__cfx_nui:close', (_data: unknown, cb: (resp: unknown) => void) => {
+    setUiOpen(false);
+    cb({});
+});

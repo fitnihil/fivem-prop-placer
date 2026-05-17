@@ -104,7 +104,7 @@ on('__cfx_nui:spawn', async (data: { model: string }, cb: (resp: unknown) => voi
 })
 
 RegisterNuiCallbackType('select');
-on('__cfx_nui:select', (data: {id: number | null}, cb: (resp: unknown) => void) => {
+on('__cfx_nui:select', (data: { id: number | null }, cb: (resp: unknown) => void) => {
     clearOutline();
     SetEntityDrawOutlineColor(255, 255, 255, 0);
     SetEntityDrawOutlineShader(1);
@@ -119,7 +119,7 @@ on('__cfx_nui:select', (data: {id: number | null}, cb: (resp: unknown) => void) 
 })
 
 RegisterNuiCallbackType('nudge');
-on('__cfx_nui:nudge', (data: { id: number; axis: Axis; delta: number; type: NudgeType }, cb: (resp: unknown) => void, ) => {
+on('__cfx_nui:nudge', (data: { id: number; axis: Axis; delta: number; type: NudgeType }, cb: (resp: unknown) => void,) => {
     const prop = spawnedProps.find(p => p.id === data.id);
     if (!prop || !DoesEntityExist(prop.entity)) {
         cb({ ok: false });
@@ -141,6 +141,34 @@ on('__cfx_nui:nudge', (data: { id: number; axis: Axis; delta: number; type: Nudg
     broadcastState();
     cb({ ok: true });
 });
+
+RegisterNuiCallbackType('delete');
+on('__cfx_nui:delete', (data: { id: number }, cb: (resp: unknown) => void) => {
+    const index = spawnedProps.findIndex(p => p.id === data.id);
+    if (index === -1) {
+        cb({ ok: false });
+        return;
+    }
+
+    const prop = spawnedProps[index];
+    if (DoesEntityExist(prop.entity)) DeleteEntity(prop.entity);
+    spawnedProps.splice(index, 1);
+
+    broadcastState();
+    cb({ ok: true });
+})
+
+RegisterNuiCallbackType('clearAll');
+on('__cfx_nui:clearAll', (_data: unknown, cb: (resp: unknown) => void) => {
+    for (const p of spawnedProps) {
+        if (DoesEntityExist(p.entity)) DeleteEntity(p.entity);
+    }
+
+    spawnedProps.length = 0;
+
+    broadcastState();
+    cb({ ok: true });
+})
 
 on('onResourceStop', (resource: string) => {
     if (resource !== GetCurrentResourceName()) return;

@@ -20,6 +20,7 @@ export function App() {
     const [props, setProps] = useState<PropState[]>([]);
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [step, setStep] = useState<Step>('coarse');
+    const [confirmClear, setConfirmClear] = useState(false);
 
     useEffect(() => {
         const handler = (e: MessageEvent) => {
@@ -44,6 +45,12 @@ export function App() {
     useEffect(() => {
         nuiFetch('select', { id: selectedId });
     }, [selectedId]);
+
+    useEffect(() => {
+        if (!confirmClear) return;
+        const t = setTimeout(() => setConfirmClear(false), 3000);
+        return () => clearTimeout(t);
+    }, [confirmClear]);
 
     const filtered = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -72,6 +79,21 @@ export function App() {
 
     function handleObjectSelect(id: number) {
         if (id !== selectedId) { setSelectedId(id) } else { setSelectedId(null); }
+    }
+
+    function handleDelete(id: number) {
+        nuiFetch('delete', { id });
+        if (id === selectedId) setSelectedId(null);
+    }
+
+    function handleClearClick() {
+        if (!confirmClear) {
+            setConfirmClear(true);
+            return;
+        }
+        nuiFetch('clearAll');
+        setSelectedId(null);
+        setConfirmClear(false);
     }
 
     return (
@@ -117,18 +139,34 @@ export function App() {
 
                 {props.length > 0 && (
                     <section className="section">
-                        <h2 className="section__title">Spawned · {props.length}</h2>
+                        <div className="section__header">
+                            <h2 className="section__title">Spawned · {props.length}</h2>
+                            <button
+                                type="button"
+                                className={`section__action ${confirmClear ? 'section__action--danger' : ''}`}
+                                onClick={handleClearClick}
+                            >
+                                {confirmClear ? 'Confirm?' : 'Clear All'}
+                            </button>
+                        </div>
                         <ul className="spawned-list">
                             {props.map(p => (
-                                <li key={p.id}>
+                                <li key={p.id} className="spawned-row">
                                     <button
                                         type="button"
-                                        className={`spawned-item ${p.id === selectedId ? 'spawned-item--selected'
-                                            : ''}`}
-                                        onClick={() => handleObjectSelect(p.id)}
+                                        className={`spawned-item ${p.id === selectedId ? 'spawned-item--selected' : ''}`}
+                                        onClick={() => setSelectedId(p.id)}
                                     >
                                         <span className="spawned-item__label">{getPropLabel(p.model)}</span>
                                         <span className="spawned-item__id">#{p.id}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="spawned-row__delete"
+                                        onClick={() => handleDelete(p.id)}
+                                        aria-label={`Delete ${getPropLabel(p.model)}`}
+                                    >
+                                        ×
                                     </button>
                                 </li>
                             ))}

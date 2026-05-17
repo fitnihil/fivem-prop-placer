@@ -316,3 +316,71 @@ body,
     font-size: 0.8125rem;
     color: rgba(255, 255, 255, 0.85);
 }
+
+.section__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.section__header .section__title {
+    margin: 0;
+}
+
+.section__action {
+    background: transparent;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.6);
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.section__action:hover {
+    background: rgba(255, 255, 255, 0.06);
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.section__action--danger {
+    background: rgba(220, 80, 80, 0.15);
+    border-color: rgba(220, 80, 80, 0.4);
+    color: rgba(255, 140, 140, 1);
+}
+
+.section__action--danger:hover {
+    background: rgba(220, 80, 80, 0.25);
+    color: rgba(255, 180, 180, 1);
+}
+
+.spawned-row {
+    display: flex;
+    align-items: stretch;
+    gap: 4px;
+}
+
+.spawned-row .spawned-item {
+    flex: 1;
+}
+
+.spawned-row__delete {
+    background: transparent;
+    border: 1px solid transparent;
+    border-radius: 6px;
+    color: rgba(255, 255, 255, 0.35);
+    width: 28px;
+    font-size: 18px;
+    line-height: 1;
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease;
+}
+
+.spawned-row__delete:hover {
+    background: rgba(220, 80, 80, 0.15);
+    color: rgba(255, 120, 120, 1);
+}

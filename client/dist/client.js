@@ -116,6 +116,30 @@ on("__cfx_nui:nudge", (data, cb) => {
   broadcastState();
   cb({ ok: true });
 });
+RegisterNuiCallbackType("delete");
+on("__cfx_nui:delete", (data, cb) => {
+  const index = spawnedProps.findIndex((p) => p.id === data.id);
+  if (index === -1) {
+    cb({ ok: false });
+    return;
+  }
+  const prop = spawnedProps[index];
+  if (DoesEntityExist(prop.entity))
+    DeleteEntity(prop.entity);
+  spawnedProps.splice(index, 1);
+  broadcastState();
+  cb({ ok: true });
+});
+RegisterNuiCallbackType("clearAll");
+on("__cfx_nui:clearAll", (_data, cb) => {
+  for (const p of spawnedProps) {
+    if (DoesEntityExist(p.entity))
+      DeleteEntity(p.entity);
+  }
+  spawnedProps.length = 0;
+  broadcastState();
+  cb({ ok: true });
+});
 on("onResourceStop", (resource) => {
   if (resource !== GetCurrentResourceName())
     return;

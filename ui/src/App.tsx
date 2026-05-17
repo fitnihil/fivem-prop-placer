@@ -21,6 +21,9 @@ export function App() {
     const [selectedId, setSelectedId] = useState<number | null>(null);
     const [step, setStep] = useState<Step>('coarse');
     const [confirmClear, setConfirmClear] = useState(false);
+    const [slots, setSlots] = useState<{ name: string; count: number }[]>([]);
+    const [slotName, setSlotName] = useState('');
+    const [confirmLoad, setConfirmLoad] = useState<string | null>(null);
 
     useEffect(() => {
         const handler = (e: MessageEvent) => {
@@ -28,6 +31,7 @@ export function App() {
             if (msg?.type === 'open') setOpen(true);
             else if (msg?.type === 'close') setOpen(false);
             else if (msg?.type === 'state') setProps(msg.props);
+            else if (msg?.type === 'slots') setSlots(msg.slots);
         };
         window.addEventListener('message', handler);
         return () => window.removeEventListener('message', handler);
@@ -51,6 +55,12 @@ export function App() {
         const t = setTimeout(() => setConfirmClear(false), 3000);
         return () => clearTimeout(t);
     }, [confirmClear]);
+
+    useEffect(() => {
+        if (!confirmLoad) return;
+        const t = setTimeout(() => setConfirmLoad(null), 3000);
+        return () => clearTimeout(t);
+    }, [confirmLoad]);
 
     const filtered = useMemo(() => {
         const query = search.trim().toLowerCase();
@@ -94,6 +104,27 @@ export function App() {
         nuiFetch('clearAll');
         setSelectedId(null);
         setConfirmClear(false);
+    }
+
+    function handleSave() {
+        const name = slotName.trim();
+        if (!name) return;
+        nuiFetch('saveSlot', { name });
+        setSlotName('');
+    }
+
+    function handleLoadClick(name: string) {
+        if (props.length === 0 || confirmLoad === name) {
+            nuiFetch('loadSlot', { name });
+            setSelectedId(null);
+            setConfirmLoad(null);
+            return;
+        }
+        setConfirmLoad(name);
+    }
+
+    function handleDeleteSlot(name: string) {
+        nuiFetch('deleteSlot', { name });
     }
 
     return (
@@ -228,6 +259,59 @@ export function App() {
                         </div>
                     </section>
                 )}
+
+                <section className="section">
+                    <h2 className="section__title">Saves</h2>
+
+                    <div className="save-input-row">
+                        <input
+                            type="text"
+                            className="search-input"
+                            placeholder="Slot name…"
+                            value={slotName}
+                            onChange={e => setSlotName(e.target.value)}
+                            onKeyDown={e => { if (e.key === 'Enter') handleSave(); }}
+                            maxLength={32}
+                        />
+                        <button
+                            type="button"
+                            className="section__action"
+                            onClick={handleSave}
+                            disabled={!slotName.trim() || props.length === 0}
+                        >
+                            Save
+                        </button>
+                    </div>
+
+                    {slots.length > 0 ? (
+                        <ul className="slot-list">
+                            {slots.map(s => (
+                                <li key={s.name} className="spawned-row">
+                                    <button
+                                        type="button"
+                                        className={`slot-item ${confirmLoad === s.name ? 'slot-item--confirm' : ''}`}
+                                        onClick={() => handleLoadClick(s.name)}
+                                    >
+                                        <span className="slot-item__name">{s.name}</span>
+                                        <span className="slot-item__meta">
+                                            {confirmLoad === s.name ? 'Confirm?' : `${s.count} prop${s.count === 1 ? '' : 's'}`}
+                                        </span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        className="spawned-row__delete"
+                                        onClick={() => handleDeleteSlot(s.name)}
+                                        aria-label={`Delete slot ${s.name}`}
+                                    >
+                                        ×
+                                    </button>
+                                </li>
+                            ))}
+                        </ul>
+                    ) : (
+                        <p className="slot-list__empty">No saved slots yet</p>
+                    )}
+                </section>
             </div>
 
             <footer className="side-panel__footer">

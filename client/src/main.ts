@@ -4,6 +4,12 @@ type SpawnedProp = {
     model: string;
 }
 
+type SavedProp = {
+    model: string;
+    position: { x: number; y: number; z: number };
+    rotation: { x: number; y: number; z: number };
+}
+
 type Axis = 'x' | 'y' | 'z';
 type NudgeType = 'move' | 'rotate';
 
@@ -60,10 +66,46 @@ function broadcastState() {
     SendNuiMessage(JSON.stringify({ type: 'state', props }));
 }
 
+function sanitizeSlotName(name: string): string {
+    return name.trim().replace(/:/g, '').slice(0, 32); // remove colons from string
+}
+
+function listSlots(): { name: string; count: number }[] {
+    const handle = StartFindKvp('slot:');
+    const slots: { name: string; count: number }[] = [];
+
+    while (true) {
+        const key = FindKvp(handle);
+        if (!key) break;
+        const name = key.slice('slot:'.length);
+        const raw = GetResourceKvpString(key);
+        if (!raw) continue;
+
+        try {
+            const parsed: SavedProp[] = JSON.parse(raw);
+            slots.push({ name, count: parsed.length });
+        } catch {
+            // corrupted; skip
+        }
+    }
+
+    EndFindKvp(handle);
+    return slots.sort((a, b) => a.name.localeCompare(b.name));
+}
+
+function broadcastSlots() {
+    SendNuiMessage(JSON.stringify({ type: 'slots', slots: listSlots() }));
+}
+
 function setUiOpen(open: boolean) {
     uiOpen = open;
     SetNuiFocus(open, open);
     SendNuiMessage(JSON.stringify({ type: open ? 'open' : 'close' }));
+
+    if (open) {
+        broadcastState();
+        broadcastSlots();
+    }
 }
 
 function clearOutline() {
@@ -168,7 +210,85 @@ on('__cfx_nui:clearAll', (_data: unknown, cb: (resp: unknown) => void) => {
 
     broadcastState();
     cb({ ok: true });
-})
+});
+
+RegisterNuiCallbackType('saveSlot');
+on('__cfx_nui:saveSlot', (data: { name: string }, cb: (resp: unknown) => void) => {
+    const name = sanitizeSlotName(data.name);
+
+    if (!name) {
+        cb({ ok: false, error: 'Invalid name' });
+        return;
+    }
+
+    const snapshot: SavedProp[] = spawnedProps.map(p => {
+        const [x, y, z] = GetEntityCoords(p.entity, false);
+        const [rx, ry, rz] = GetEntityRotation(p.entity, 2);
+        return {
+            model: p.model,
+            position: { x, y, z },
+            rotation: { x: rx, y: ry, z: rz },
+        };
+    });
+
+    SetResourceKvp(`slot:${name}`, JSON.stringify(snapshot));
+
+    broadcastSlots();
+    cb({ ok: true });
+});
+
+RegisterNuiCallbackType('loadSlot');
+on('__cfx_nui:loadSlot', async (data: { name: string }, cb: (resp: unknown) => void) => {
+    const name = sanitizeSlotName(data.name);
+    const raw = GetResourceKvpString(`slot:${name}`);
+
+    if (!raw) {
+        cb({ ok: false, error: 'Slot not found' });
+        return;
+    }
+
+    let snapshot: SavedProp[];
+
+    try {
+        snapshot = JSON.parse(raw);
+    } catch {
+        cb({ ok: false, error: 'Corrupted slot' });
+        return;
+    }
+
+    clearOutline();
+
+    for (const p of spawnedProps) {
+        if (DoesEntityExist(p.entity)) DeleteEntity(p.entity);
+    }
+    
+    spawnedProps.length = 0;
+
+    for (const saved of snapshot) {
+        const hash = GetHashKey(saved.model);
+        if (!IsModelInCdimage(hash)) continue;
+        const loaded = await loadModel(hash);
+        if (!loaded) continue;
+        const entity = CreateObject(
+            hash, saved.position.x, saved.position.y, saved.position.z,
+            true, false, false,
+        );
+        SetEntityRotation(entity, saved.rotation.x, saved.rotation.y, saved.rotation.z, 2, true);
+        SetModelAsNoLongerNeeded(hash);
+        spawnedProps.push({ id: nextPropId++, entity, model: saved.model });
+    }
+
+    broadcastState();
+    cb({ ok: true, loaded: snapshot.length });
+});
+
+RegisterNuiCallbackType('deleteSlot');
+on('__cfx_nui:deleteSlot', (data: { name: string }, cb: (resp: unknown) => void) => {
+    const name = sanitizeSlotName(data.name);
+    DeleteResourceKvp(`slot:${name}`);
+    broadcastSlots();
+    cb({ ok: true });
+});
 
 on('onResourceStop', (resource: string) => {
     if (resource !== GetCurrentResourceName()) return;

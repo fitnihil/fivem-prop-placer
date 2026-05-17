@@ -1,9 +1,0 @@
-{
-  "name": "prop-placer",
-  "version": "0.1.0",
-  "private": true,
-  "scripts": {
-    "build": "npm --prefix client run build && npm --prefix ui run build",
-    "install:all": "npm --prefix client install && npm --prefix ui install"
-  }
-}

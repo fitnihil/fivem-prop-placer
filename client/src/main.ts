@@ -3,5 +3,5 @@ const chatNotify = (color: [number, number, number], title: string, body: string
 }
 
 RegisterCommand('props', () => {
-    
+    chatNotify([100, 255, 255], 'Prop Placer', 'Command registered')
 }, false)

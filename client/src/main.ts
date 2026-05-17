@@ -34,7 +34,7 @@ function loadModel(hash: number): Promise<boolean> {
     });
 }
 
-function raycastFromCamera(maxDistance: number = 50): [number, number, number] {
+async function raycastFromCamera(maxDistance: number = 50): Promise<[number, number, number]> {
     const [camX, camY, camZ] = GetGameplayCamCoord();
     const [pitch, _roll, yaw] = GetGameplayCamRot(2);
 
@@ -49,9 +49,15 @@ function raycastFromCamera(maxDistance: number = 50): [number, number, number] {
     const endY = camY + fy * maxDistance;
     const endZ = camZ + fz * maxDistance;
 
-    const handle = StartExpensiveSynchronousShapeTestLosProbe(camX, camY, camZ, endX, endY, endZ, -1, PlayerPedId(), 0);
+    const handle = StartShapeTestLosProbe(camX, camY, camZ, endX, endY, endZ, -1, PlayerPedId(), 0);
 
-    const [, hit, hitCoords] = GetShapeTestResult(handle);
+    let status = 1;
+    let hit = false;
+    let hitCoords: number[] = [0, 0, 0];
+    for (let i = 0; i < 30 && status === 1; i++) {
+        await new Promise(r => setTimeout(r, 0));
+        [status, hit, hitCoords] = GetShapeTestResult(handle);
+    }
 
     if (hit) return [hitCoords[0], hitCoords[1], hitCoords[2]];
     return [endX, endY, endZ];
@@ -136,7 +142,7 @@ on('__cfx_nui:spawn', async (data: { model: string }, cb: (resp: unknown) => voi
         return;
     }
 
-    const [x, y, z] = raycastFromCamera();
+    const [x, y, z] = await raycastFromCamera();
     const entity = CreateObject(hash, x, y, z, true, false, false);
     SetModelAsNoLongerNeeded(hash);
 
